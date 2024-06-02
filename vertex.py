@@ -51,10 +51,10 @@ class Assistant:
 
         # Use tools in chat:
         self.model = GenerativeModel(
-            "gemini-1.5-flash-preview-0514",
-            # You can specify tools when creating a model to avoid having to send them with every request.
+            # "gemini-1.5-flash-preview-0514",
+            "gemini-1.5-pro-preview-0409",
             tools=[travigo_tool],
-            system_instruction=Part.from_text("You are an AI assistant who helps users with queries about public transport")
+            system_instruction=Part.from_text("You are an AI assistant who helps users with queries about public transport. When searching for stops for trains you must use a transporttype of Rail instead of Train")
         )
 
         # Activate automatic function calling:
@@ -82,8 +82,8 @@ if __name__ == "__main__":
     assistant = Assistant()
     assistant.create_chat()
 
-    assistant.message("Hi")
-    assistant.message("Is there a rail station in Baldock and what is its name and identifier?")
+    assistant.message_print("Hi")
+    assistant.message_print("Is there a rail station in Baldock and what is its name and identifier?")
     # assistant.("What services run at this station")
-    assistant.message("When is the next train to Cambridge from this station?")
-    assistant.message("I can't make that, when is the next one around 10pm?")
+    assistant.message_print("When is the next train to Cambridge from this station?")
+    assistant.message_print("I can't make that, when is the next one around 10pm?")

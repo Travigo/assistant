@@ -1,67 +1,45 @@
-import asyncio
-import logging
-from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict, Iterator, List
-
-import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from websockets.sync.client import connect as ws_connect
-
-from autogen.io.websockets import IOWebsockets
 
 from vertex import Assistant
 
-PORT = 8084
-
-logger = logging.getLogger(__name__)
-
-
-def on_connect(iostream: IOWebsockets) -> None:
-    logger.info(f"on_connect(): Connected to client using IOWebsockets {iostream}")
-
-    logger.info("on_connect(): Receiving message from client.")
-
-    # get the initial message from the client
-    initial_msg = iostream.input()
-
-    print(initial_msg)
-
-    assistant = Assistant()
-    assistant.create_chat()
-  
-    response = assistant.message(initial_msg)
-    for part in response.candidates[0].content.parts:
-      iostream.print(part.text)
-
-    logger.info("on_connect(): Finished the task successfully.")
-
+app = FastAPI()
 
 html = """
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Autogen websocket test</title>
+        <title>Chat</title>
     </head>
     <body>
-        <h1>WebSocket Chat</h1>
+        <h1>Travigo Assistant chat</h1>
+        <h2>Your ID: <span id="ws-id"></span></h2>
         <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off" value="Is there a rail station in Baldock and what is its name and identifier?"/>
+            <input type="text" id="messageText" autocomplete="off"/>
             <button>Send</button>
         </form>
         <ul id='messages'>
         </ul>
         <script>
-            var ws = new WebSocket("ws://localhost:8080/ws");
+            var client_id = Date.now()
+            document.querySelector("#ws-id").textContent = client_id;
+            var ws = new WebSocket(`ws://localhost:8000/ws/${client_id}`);
             ws.onmessage = function(event) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
+                var content = document.createTextNode("AI: " + event.data)
                 message.appendChild(content)
                 messages.appendChild(message)
             };
             function sendMessage(event) {
                 var input = document.getElementById("messageText")
+
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode("You: " + input.value)
+                message.appendChild(content)
+                messages.appendChild(message)
+
                 ws.send(input.value)
                 input.value = ''
                 event.preventDefault()
@@ -72,32 +50,41 @@ html = """
 """
 
 
-@asynccontextmanager
-async def run_websocket_server(app: FastAPI) -> AsyncIterator[None]:
-    with IOWebsockets.run_server_in_thread(on_connect=on_connect, port=8080) as uri:
-        logger.info(f"Websocket server started at {uri}.")
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
 
-        yield
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
 
-app = FastAPI(lifespan=run_websocket_server)
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+manager = ConnectionManager()
 
 
 @app.get("/")
-async def get() -> HTMLResponse:
+async def get():
     return HTMLResponse(html)
 
 
-async def start_uvicorn() -> None:
-    config = uvicorn.Config(app)
-    server = uvicorn.Server(config)
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: int):
+    assistant = Assistant()
+    assistant.create_chat()
+
+    await manager.connect(websocket)
     try:
-        await server.serve()  # noqa: F704
-    except KeyboardInterrupt:
-        logger.info("Shutting down server")
+        while True:
+            data = await websocket.receive_text()
 
+            response = assistant.message(data)
 
-if __name__ == "__main__":
-    # set the log level to INFO
-    logger.setLevel("INFO")
-    asyncio.run(start_uvicorn())
+            for part in response.candidates[0].content.parts:
+                await manager.send_personal_message(part.text, websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
