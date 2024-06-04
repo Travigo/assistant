@@ -89,4 +89,4 @@ jobs:
 
     - name: Helm upgrade
       run: |-
-        helm upgrade -i travigo-assistant ./charts/travigo-assistant --set image.tag=sha-${{ github.sha }}
+        helm upgrade -i travigo-assistant ./deploy/travigo-assistant --set image.tag=sha-${{ github.sha }}
