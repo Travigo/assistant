@@ -25,7 +25,7 @@ class OnMessageReceived(BaseModel):
   Media	: str = ""
   ChannelMetadata : str = ""
 
-@app.get("/")
+@app.get("/assistant/twilio/")
 async def get():
     return HTMLResponse("No content here")
 

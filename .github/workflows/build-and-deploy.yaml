@@ -1,0 +1,92 @@
+name: Build & Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  GKE_CLUSTER: travigo-gke
+  GCP_ZONE: europe-central2-a
+
+jobs:
+  build-docker:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short
+            type=sha,format=long
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-helm:
+    if: github.ref == 'refs/heads/main'
+  
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      url: https://api.travigo.app/core/assistant
+
+    needs: build-docker
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Helm tool installer
+      uses: Azure/setup-helm@v3
+
+    - name: Kubectl tool installer
+      uses: Azure/setup-kubectl@v3
+
+    - name: Get GCP Auth
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+    - name: Get GKE Cluster
+      uses: 'google-github-actions/get-gke-credentials@v2'
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GCP_ZONE }}
+
+    - name: Helm upgrade
+      run: |-
+        helm upgrade -i travigo-assistant ./charts/travigo-assistant --set image.tag=sha-${{ github.sha }}
