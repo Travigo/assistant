@@ -37,6 +37,14 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            - name: TRAVIGO_MONGODB_CONNECTION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.database.connectionStringSecret }}
+                  key: connectionString.standard
+                  optional: false
+            - name: TRAVIGO_MONGODB_DATABASE
+              value: {{ $.Values.database.database }}
             - name: TRAVIGO_TWILIO_ACCOUNT_SID
               valueFrom:
                 secretKeyRef:

@@ -4,6 +4,10 @@
 
 replicaCount: 1
 
+database:
+  connectionStringSecret: travigo-mongodb-admin-travigo
+  database: travigo
+
 twilio:
   credentialsSecret: travigo-assistant-twilio
 
