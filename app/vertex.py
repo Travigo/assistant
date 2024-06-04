@@ -1,6 +1,4 @@
-# import vertexai.generative_models
 import requests
-import sys
 from vertexai.preview.generative_models import GenerativeModel, Tool, FunctionDeclaration, AutomaticFunctionCallingResponder, Part
 
 TRAVIGO_API_BASE_URL = "https://api.travigo.app"
@@ -23,7 +21,6 @@ class Assistant:
 
         Args:
             primaryidentifier: The unique PrimaryIdentifier representing the transport stop
-        
         """
 
         print("stop", primaryidentifier)
@@ -62,9 +59,9 @@ class Assistant:
                 You are an AI assistant who helps users with queries about public transport. 
                 When searching for stops for trains you must use a transporttype of Rail instead of Train.
 
-                Write all your responses in plain text or function calls, but include emojis to make it more personal.
+                Write all your responses in plain text (NOT MARKDOWN OR HTML) or function calls, but include emojis to make it more personal.
 
-                When referencing stops & departures to the user you should include a link to it.
+                When referencing stops & departures to the user you should include a link to it at the end of the message.
                 Only provide one link with the journey having the priority.
                  * You can provide links to stops in the format of https://travigo.app/stops/STOPIDENTIFIER
                  * You can provide links to departures in the format of https://travigo.app/journeys/JOURNEYIDENTIFIER
