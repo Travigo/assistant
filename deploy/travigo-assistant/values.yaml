@@ -4,6 +4,9 @@
 
 replicaCount: 1
 
+twilio:
+  credentialsSecret: travigo-assistant-twilio
+
 image:
   repository: ghcr.io/travigo/assistant
   pullPolicy: Always
