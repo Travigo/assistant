@@ -1,90 +1,71 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import logging
+import json
+import os
+
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from twilio.rest import Client
 
 from vertex import Assistant
 
 app = FastAPI()
 
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>Travigo Assistant chat</h1>
-        <h2>Your ID: <span id="ws-id"></span></h2>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var client_id = Date.now()
-            document.querySelector("#ws-id").textContent = client_id;
-            var ws = new WebSocket(`ws://localhost:8000/ws/${client_id}`);
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode("AI: " + event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-            function sendMessage(event) {
-                var input = document.getElementById("messageText")
-
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode("You: " + input.value)
-                message.appendChild(content)
-                messages.appendChild(message)
-
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
-            }
-        </script>
-    </body>
-</html>
-"""
-
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
-
-manager = ConnectionManager()
-
+class OnMessageReceived(BaseModel):
+  EventType	: str = ""
+  ConversationSid : str = ""
+  MessageSid : str = ""
+  MessagingServiceSid	: str = ""
+  Index : int = 0
+  DateCreated	: str = ""
+  Body : str = ""
+  Author	: str = ""
+  ParticipantSid	: str = ""
+  Attributes	: str = ""
+  Media	: str = ""
+  ChannelMetadata : str = ""
 
 @app.get("/")
 async def get():
-    return HTMLResponse(html)
+    return HTMLResponse("No content here")
 
+@app.post("/assistant/twilio/webhook")
+async def get(request: Request):
+    client = Client(os.environ['TRAVIGO_TWILIO_ACCOUNT_SID'], os.environ['TRAVIGO_TWILIO_AUTH_TOKEN'])
 
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
-    assistant = Assistant()
-    assistant.create_chat()
+    # print(request.form, )
+    form_data = await request.form()
 
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
+    event_type = form_data['EventType']
+    
+    if event_type == "onMessageAdded":
+        received_message = OnMessageReceived(**form_data)
+        print(received_message)
 
-            response = assistant.message(data)
+        logging.info("Message received")
 
-            for part in response.candidates[0].content.parts:
-                await manager.send_personal_message(part.text, websocket)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        assistant = Assistant()
+        assistant.create_chat()
+
+        response = assistant.message(received_message.Body)
+
+        for part in response.candidates[0].content.parts:
+            send_message = client.conversations \
+                    .v1 \
+                    .services(os.environ['TRAVIGO_TWILIO_SERVICE_SID']) \
+                    .conversations(received_message.ConversationSid) \
+                    .messages \
+                    .create(author='system', body=part.text)
+            
+            print(send_message)
+
+        history = []
+
+        for historyItem in assistant.chat.history[-5:]:
+          history.append(historyItem.to_dict())
+
+        print(json.dumps(history))
+
+        return HTMLResponse("OK")
+    
+    return HTMLResponse("Unknown mode")
