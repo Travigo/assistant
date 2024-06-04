@@ -38,23 +38,23 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: TRAVIGO_TWILIO_ACCOUNT_SID
-                valueFrom:
-                  secretKeyRef:
-                    name: {{ $.Values.twilio.credentialsSecret }}
-                    key: account_sid
-                    optional: false
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.twilio.credentialsSecret }}
+                  key: account_sid
+                  optional: false
             - name: TRAVIGO_TWILIO_AUTH_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: {{ $.Values.twilio.credentialsSecret }}
-                    key: auth_token
-                    optional: false
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.twilio.credentialsSecret }}
+                  key: auth_token
+                  optional: false
             - name: TRAVIGO_TWILIO_SERVICE_SID
-                valueFrom:
-                  secretKeyRef:
-                    name: {{ $.Values.twilio.credentialsSecret }}
-                    key: service_sid
-                    optional: false
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.twilio.credentialsSecret }}
+                  key: service_sid
+                  optional: false
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
