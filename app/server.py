@@ -38,7 +38,6 @@ class OnConversationRemoved(BaseModel):
 
 @app.get("/assistant")
 async def get():
-  updateConversationHistory("dlkfngjkdnfg", json.dumps({}))
   return HTMLResponse("No content here")
 
 def getConversationHistory(conversationID : str) -> AssistantConversation:
