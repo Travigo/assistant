@@ -51,8 +51,8 @@ class Assistant:
 
         # Use tools in chat:
         self.model = GenerativeModel(
-            # "gemini-1.5-flash-preview-0514",
-            "gemini-1.5-pro-preview-0409",
+            "gemini-1.5-flash-preview-0514",
+            # "gemini-1.5-pro-preview-0409",
             tools=[travigo_tool],
             system_instruction=Part.from_text(
                 """
