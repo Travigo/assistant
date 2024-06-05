@@ -2,3 +2,4 @@ requests==2.31.0
 google-cloud-aiplatform==1.52.0
 twilio==9.1.0
 fastapi==0.111.0
+pymongo==4.7.3
