@@ -31,6 +31,11 @@ class OnMessageReceived(BaseModel):
   Media	: str = ""
   ChannelMetadata : str = ""
 
+class OnConversationRemoved(BaseModel):
+  EventType	: str = ""
+  ConversationSid : str = ""
+
+
 @app.get("/assistant")
 async def get():
   updateConversationHistory("dlkfngjkdnfg", json.dumps({}))
@@ -62,6 +67,14 @@ def updateConversationHistory(conversation: AssistantConversation):
 
   collection.update_one(searchQuery, {"$set": conversation.model_dump()}, upsert=True)
 
+def deleteConversationHistory(conversationID : str):
+  db = client[os.environ['TRAVIGO_MONGODB_DATABASE']]
+  collection = db['assistant_conversations']
+
+  searchQuery = {"ConversationID": conversationID}
+
+  collection.delete_one(searchQuery)
+
 @app.post("/assistant/twilio/webhook")
 async def get(request: Request):
   client = Client(os.environ['TRAVIGO_TWILIO_ACCOUNT_SID'], os.environ['TRAVIGO_TWILIO_AUTH_TOKEN'])
@@ -71,55 +84,62 @@ async def get(request: Request):
   event_type = form_data['EventType']
   
   if event_type == "onMessageAdded":
-      received_message = OnMessageReceived(**form_data)
-      print(received_message)
+    received_message = OnMessageReceived(**form_data)
+    print(received_message)
 
-      logging.info("Message received")
+    logging.info("Message received")
 
-      # Load previous history
-      conversationHistory = getConversationHistory(received_message.ConversationSid)
-      previousHistoryDict = json.loads(conversationHistory.Messages)
-      previousHistory = []
+    # Load previous history
+    conversationHistory = getConversationHistory(received_message.ConversationSid)
+    previousHistoryDict = json.loads(conversationHistory.Messages)
+    previousHistory = []
 
-      for historyItem in previousHistoryDict:
-        parts = []
-        for partDef in historyItem['parts']:
-          if 'text' in partDef:
-            part = Part.from_text(partDef['text'])
-          elif 'function_call' in partDef or 'function_response' in partDef:
-            part = Part.from_dict(partDef)
+    for historyItem in previousHistoryDict:
+      parts = []
+      for partDef in historyItem['parts']:
+        if 'text' in partDef:
+          part = Part.from_text(partDef['text'])
+        elif 'function_call' in partDef or 'function_response' in partDef:
+          part = Part.from_dict(partDef)
 
-          parts.append(part)
+        parts.append(part)
 
-        content = Content(role=historyItem['role'], parts=parts)
-        previousHistory.append(content)
+      content = Content(role=historyItem['role'], parts=parts)
+      previousHistory.append(content)
 
-      # Create new chat
-      assistant = Assistant()
-      assistant.create_chat(history=previousHistory)
+    # Create new chat
+    assistant = Assistant()
+    assistant.create_chat(history=previousHistory)
 
-      response = assistant.message(received_message.Body)
+    response = assistant.message(received_message.Body)
 
-      for part in response.candidates[0].content.parts:
-        send_message = client.conversations \
-                .v1 \
-                .services(os.environ['TRAVIGO_TWILIO_SERVICE_SID']) \
-                .conversations(received_message.ConversationSid) \
-                .messages \
-                .create(author='system', body=part.text)
-        
-        print(send_message)
+    for part in response.candidates[0].content.parts:
+      send_message = client.conversations \
+              .v1 \
+              .services(os.environ['TRAVIGO_TWILIO_SERVICE_SID']) \
+              .conversations(received_message.ConversationSid) \
+              .messages \
+              .create(author='system', body=part.text)
+      
+      print(send_message)
 
-      # Update database history
-      history = []
+    # Update database history
+    history = []
 
-      for historyItem in assistant.chat.history:
-        history.append(historyItem.to_dict())
+    for historyItem in assistant.chat.history:
+      history.append(historyItem.to_dict())
 
-      conversationHistory.Messages = json.dumps(history)
+    conversationHistory.Messages = json.dumps(history)
 
-      updateConversationHistory(conversationHistory)
+    updateConversationHistory(conversationHistory)
 
-      return HTMLResponse("OK")
+    return HTMLResponse("OK")
+  if event_type == "onConversationRemoved":
+    received_message = OnMessageReceived(**form_data)
+    deleteConversationHistory(received_message.ConversationSid)
+
+    logging.info("Conversation removed")
+
+    return HTMLResponse("OK")
   
   return HTMLResponse("Unknown mode")
