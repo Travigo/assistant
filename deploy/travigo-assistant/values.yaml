@@ -78,6 +78,7 @@ livenessProbe:
   httpGet:
     path: /assistant
     port: http
+  periodSeconds: 60
 readinessProbe:
   httpGet:
     path: /assistant
