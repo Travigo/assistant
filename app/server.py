@@ -17,6 +17,8 @@ from vertexai.preview.generative_models import Content, Part
 client = MongoClient(os.environ['TRAVIGO_MONGODB_CONNECTION'])
 app = FastAPI()
 
+logging.basicConfig(level=logging.INFO)
+
 class OnMessageReceived(BaseModel):
   EventType	: str = ""
   ConversationSid : str = ""
@@ -89,6 +91,7 @@ async def get(request: Request):
     logging.info("Message received")
 
     # Load previous history
+    now = datetime.now()
     conversationHistory = getConversationHistory(received_message.ConversationSid)
     previousHistoryDict = json.loads(conversationHistory.Messages)
     previousHistory = []
@@ -106,11 +109,20 @@ async def get(request: Request):
       content = Content(role=historyItem['role'], parts=parts)
       previousHistory.append(content)
 
+    logging.info(f"load previous history: {datetime.now()-now}")
+    now = datetime.now()
+
     # Create new chat
     assistant = Assistant()
     assistant.create_chat(history=previousHistory)
 
+    logging.info(f"setup assistant: {datetime.now()-now}")
+    now = datetime.now()
+
     response = assistant.message(received_message.Body)
+
+    logging.info(f"generate message: {datetime.now()-now}")
+    now = datetime.now()
 
     for part in response.candidates[0].content.parts:
       send_message = client.conversations \
@@ -122,6 +134,9 @@ async def get(request: Request):
       
       print(send_message)
 
+    logging.info(f"send message: {datetime.now()-now}")
+    now = datetime.now()
+
     # Update database history
     history = []
 
@@ -131,6 +146,9 @@ async def get(request: Request):
     conversationHistory.Messages = json.dumps(history)
 
     updateConversationHistory(conversationHistory)
+
+    logging.info(f"update history: {datetime.now()-now}")
+    now = datetime.now()
 
     return HTMLResponse("OK")
   if event_type == "onConversationRemoved":

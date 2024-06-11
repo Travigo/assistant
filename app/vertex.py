@@ -1,8 +1,12 @@
+import logging
+from datetime import datetime
 import requests
 from vertexai.preview.generative_models import GenerativeModel, Tool, FunctionDeclaration, AutomaticFunctionCallingResponder, Part
 
 TRAVIGO_API_BASE_URL = "https://api.travigo.app"
 # TRAVIGO_API_BASE_URL = "http://localhost:8080"
+
+logging.basicConfig(level=logging.INFO)
 
 class Assistant:
     def search_stops(self, name : str, transporttype : str):
@@ -13,7 +17,10 @@ class Assistant:
             transporttype: The mode of transport the stop serves, such as bus, train, rail, tram, metro, underground
         """
         print("stop_search", name, transporttype)
+
+        now = datetime.now()
         resp = requests.get(url=f"{TRAVIGO_API_BASE_URL}/core/stops/search", params={'isllm': True, 'name':name, 'transporttype':transporttype})
+        logging.info(f"stop_search: {datetime.now()-now}")
         return resp.json()
 
     def get_stop(self, primaryidentifier : str):
@@ -25,7 +32,9 @@ class Assistant:
 
         print("stop", primaryidentifier)
 
+        now = datetime.now()
         resp = requests.get(url=f"{TRAVIGO_API_BASE_URL}/core/stops/{primaryidentifier}", params={'isllm': True})
+        logging.info(f"get_stop: {datetime.now()-now}")
         return resp.json()
 
     def stop_departures(self, primaryidentifier : str):
@@ -36,7 +45,9 @@ class Assistant:
         """
         print("departures", primaryidentifier)
         
+        now = datetime.now()
         resp = requests.get(url=f"{TRAVIGO_API_BASE_URL}/core/stops/{primaryidentifier}/departures", params={'isllm': True})
+        logging.info(f"stop_search: {datetime.now()-now}")
         return {"departures": resp.json()}
 
     
@@ -51,7 +62,7 @@ class Assistant:
 
         # Use tools in chat:
         self.model = GenerativeModel(
-            "gemini-1.5-flash-preview-0514",
+            "gemini-1.5-flash",
             # "gemini-1.5-pro-preview-0409",
             tools=[travigo_tool],
             system_instruction=Part.from_text(
@@ -84,14 +95,18 @@ class Assistant:
 
     def message_print(self, text):
         print(f"User: {text}")
+        now = datetime.now()
         response = self.chat.send_message(text)
+        logging.info(f"send message: {datetime.now()-now}")
         
         for part in response.candidates[0].content.parts:
             print(f"AI: {part.text}")
 
 if __name__ == "__main__":
+    now = datetime.now()
     assistant = Assistant()
     assistant.create_chat()
+    logging.info(f"setup assistant: {datetime.now()-now}")
 
     # assistant.message_print("Hi")
     assistant.message_print("Is there a rail station in Baldock and what is its next departure?")
