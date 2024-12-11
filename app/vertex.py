@@ -62,13 +62,13 @@ class Assistant:
 
         # Use tools in chat:
         self.model = GenerativeModel(
-            "gemini-1.5-flash",
-            # "gemini-1.5-pro-preview-0409",
+            # "gemini-1.5-flash",
+            "gemini-2.0-flash-exp",
             tools=[travigo_tool],
             system_instruction=Part.from_text(
                 """
                 You are an AI assistant who helps users with queries about public transport. 
-                When searching for stops for trains you must use a transporttype of Rail instead of Train.
+                When searching for stops for trains you must use a transporttype of Rail instead of Train. If you're searching for a Rail type stop and it fails to find any, try again with Metro.
 
                 Write all your responses in plain text (NOT MARKDOWN OR HTML) or function calls, but include emojis to make it more personal.
 
