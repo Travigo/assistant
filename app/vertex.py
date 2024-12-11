@@ -74,8 +74,8 @@ class Assistant:
 
                 When referencing stops & departures to the user you should include a link to it at the end of the message.
                 Only provide one link with the journey having the priority.
-                 * You can provide links to stops in the format of https://travigo.app/stops/STOPIDENTIFIER
-                 * You can provide links to departures in the format of https://travigo.app/journeys/JOURNEYIDENTIFIER
+                 * You can provide links to stops in the format of https://travigo.app/stops/PrimaryIdentifier
+                 * You can provide links to departures in the format of https://travigo.app/journeys/PrimaryIdentifier
                 """
             )
         )
