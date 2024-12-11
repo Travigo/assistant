@@ -76,6 +76,7 @@ class Assistant:
                 Only provide one link with the journey having the priority.
                  * You can provide links to stops in the format of https://travigo.app/stops/PrimaryIdentifier
                  * You can provide links to departures in the format of https://travigo.app/journeys/PrimaryIdentifier
+                Where you replace PrimaryIdentifier with the actual PrimaryIdentifier of the objct
                 """
             )
         )
