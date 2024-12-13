@@ -49,15 +49,30 @@ class Assistant:
         resp = requests.get(url=f"{TRAVIGO_API_BASE_URL}/core/stops/{primaryidentifier}/departures", params={'isllm': True})
         logging.info(f"stop_search: {datetime.now()-now}")
         return {"departures": resp.json()}
+    
+    def search_journey_planner(self, origin_primaryidentifier : str, destination_primaryidentifier : str):
+        """Return all possible journeys a user can take to get between the Origin and Destination stop.
+        It is ordered by earliest departure date from now, but a later one may have an earlier arrival time.
+        
+        Args:
+            origin_primaryidentifier: The unique PrimaryIdentifier representing the Stop the user is departing from
+            destination_primaryidentifier: The unique PrimaryIdentifier representing the Stop the user is travelling to
+        """
+        logging.info(f"search_journey_planner: {origin_primaryidentifier} -> {destination_primaryidentifier}")
+
+        resp = requests.get(url=f"{TRAVIGO_API_BASE_URL}/core/planner/{origin_primaryidentifier}/{destination_primaryidentifier}", params={'isllm': True})
+
+        return resp.json()
 
     
     def __init__(self) -> None:
         get_stop_func = FunctionDeclaration.from_func(self.get_stop)
         search_stops_func = FunctionDeclaration.from_func(self.search_stops)
         stop_departures_func = FunctionDeclaration.from_func(self.stop_departures)
+        search_journey_planner_func = FunctionDeclaration.from_func(self.search_journey_planner)
         # Tool is a collection of related functions
         travigo_tool = Tool(
-            function_declarations=[get_stop_func, search_stops_func, stop_departures_func],
+            function_declarations=[get_stop_func, search_stops_func, stop_departures_func, search_journey_planner_func],
         )
 
         # Use tools in chat:
@@ -109,8 +124,9 @@ if __name__ == "__main__":
     assistant.create_chat()
     logging.info(f"setup assistant: {datetime.now()-now}")
 
+    assistant.message_print("When is the next train from Baldock to London Blackfriars?")
     # assistant.message_print("Hi")
-    assistant.message_print("Is there a rail station in Baldock and what is its next departure?")
+    # assistant.message_print("Is there a rail station in Baldock and what is its next departure?")
     # assistant.message_print("What is the location of this station?")
     # assistant.message_print("What address is that")
     # assistant.("What services run at this station")
