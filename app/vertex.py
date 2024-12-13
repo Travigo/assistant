@@ -47,7 +47,7 @@ class Assistant:
         
         now = datetime.now()
         resp = requests.get(url=f"{TRAVIGO_API_BASE_URL}/core/stops/{primaryidentifier}/departures", params={'isllm': True})
-        logging.info(f"stop_search: {datetime.now()-now}")
+        logging.info(f"stop_departures: {datetime.now()-now}")
         return {"departures": resp.json()}
     
     def search_journey_planner(self, origin_primaryidentifier : str, destination_primaryidentifier : str):
@@ -124,11 +124,11 @@ if __name__ == "__main__":
     assistant.create_chat()
     logging.info(f"setup assistant: {datetime.now()-now}")
 
-    assistant.message_print("When is the next train from Baldock to London Blackfriars?")
+    # assistant.message_print("When is the next train from Baldock to London Blackfriars?")
     # assistant.message_print("Hi")
     # assistant.message_print("Is there a rail station in Baldock and what is its next departure?")
     # assistant.message_print("What is the location of this station?")
     # assistant.message_print("What address is that")
-    # assistant.("What services run at this station")
+    # assistant.message_print("What services run at this station")
     # assistant.message_print("When is the next train to Cambridge from this station?")
     # assistant.message_print("I can't make that, when is the next one after that")
